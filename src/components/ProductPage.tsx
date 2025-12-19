@@ -5,13 +5,14 @@ import { MaterialType, ProductVariant, Product } from '../types';
 import { CheckIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
 
 interface ProductPageProps {
-  products: Product[]; // Nuevo prop obligatorio
+  products: Product[];
   onAddToCart: (product: Product, variant: ProductVariant, material: MaterialType) => void;
 }
 
 const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
   const { id } = useParams<{ id: string }>();
-  // Buscar en la lista pasada por props
+  
+  // BUSCAR EL PRODUCTO EN LA LISTA DESCARGADA
   const product = products.find(p => p.id === id);
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -28,9 +29,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
     return (
       <div className="text-center py-20 px-4 space-y-4">
         <h2 className="text-2xl font-light">Obra no encontrada</h2>
-        <p className="text-muted">El catálogo se actualizó o el enlace es incorrecto.</p>
+        <p className="text-muted">El código QR escaneado no parece válido o la obra no está en el catálogo.</p>
         <Link to="/" className="inline-block px-6 py-2 border border-white rounded-full hover:bg-white hover:text-black transition">
-          Volver al Catálogo
+          Ver Catálogo Completo
         </Link>
       </div>
     );
@@ -53,7 +54,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
     }
   };
 
-  // Safe encoding para la imagen
   const getSafeSrc = (url: string) => {
     const lastSlash = url.lastIndexOf('/');
     const path = url.substring(0, lastSlash + 1);
@@ -136,7 +136,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
               { id: 'ar', label: 'Acrílico (AR)', desc: 'Montaje moderno' }
             ].map((mat) => {
               const price = selectedVariant.prices[mat.id as MaterialType];
-              if (!price) return null; // No mostrar si precio es 0
+              if (!price) return null;
 
               return (
               <button

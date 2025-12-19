@@ -10,7 +10,7 @@ interface HomePageProps {
 const HomePage: React.FC<HomePageProps> = ({ products }) => {
   const [showQrTools, setShowQrTools] = useState(false);
   
-  // URL por defecto (ajustar si es necesario)
+  // URL por defecto para QRs
   const PRODUCTION_URL = "https://kichwangumu-catalogo.vercel.app";
 
   const [baseUrl, setBaseUrl] = useState(() => {

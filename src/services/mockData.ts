@@ -1,11 +1,11 @@
-import { Product, ProductVariant, PriceMap } from '../types';
+import { Product } from '../types';
 
 // =====================================================================
 // CONFIGURACIÓN DE GOOGLE SHEETS
 // =====================================================================
-const SHEET_ID = '1hNGqoXwhFOP23zdEi0w3aqHpxnBJyIIw73qm7QWRkUQ';
-const GID = '1646000527'; // GID de la hoja "Lista Precios"
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+// Usamos el ID exacto que proporcionaste.
+// Transformamos el link 'pubhtml' a 'pub?output=csv' para poder leer los datos.
+const PUBLISHED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbwfXLJyJ8VIP8fwqFZzbeV6PGJ8Ygu8IS1yVRiXG5xJq-6W9zdJGtqvUlAh4NZn6_2knlQh-WoD8c/pub?output=csv";
 
 // =====================================================================
 // UTILIDADES
@@ -20,7 +20,6 @@ const slugify = (text: string) => {
     .trim();
 };
 
-// Parser simple de CSV que maneja comillas básicas
 const parseCSV = (text: string) => {
   const lines = text.split('\n').filter(l => l.trim() !== '');
   if (lines.length < 2) return [];
@@ -28,7 +27,6 @@ const parseCSV = (text: string) => {
   const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
   
   return lines.slice(1).map(line => {
-    // Regex para separar por comas ignorando las que están dentro de comillas
     const regex = /(?:^|,)(?:"([^"]*)"|([^",]*))/g;
     const values: string[] = [];
     let match;
@@ -59,18 +57,18 @@ export const fetchCatalog = async (): Promise<Product[]> => {
   try {
     let text = '';
     
-    // Intento 1: Directo
+    // 1. Intentar fetch directo (más rápido)
     try {
-        const response = await fetch(CSV_URL);
+        const response = await fetch(PUBLISHED_URL);
         if (response.ok) {
             text = await response.text();
         } else {
             throw new Error('Direct fetch failed');
         }
     } catch (e) {
-        // Intento 2: Proxy (para evitar CORS)
+        // 2. Intentar fetch vía Proxy (para evitar bloqueos CORS)
         console.warn("Conexión directa falló, intentando proxy...");
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_URL)}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(PUBLISHED_URL)}`;
         const response = await fetch(proxyUrl);
         if (!response.ok) throw new Error('Proxy fetch failed');
         text = await response.text();
@@ -91,7 +89,6 @@ export const fetchCatalog = async (): Promise<Product[]> => {
         productMap.set(productId, {
           id: productId,
           name: name,
-          // Las imagenes deben estar en la carpeta public/photos/ con el nombre exacto de la columna "Foto" + .jpg
           imageUrl: `/photos/${name}.jpg`, 
           isFeline,
           variants: []
