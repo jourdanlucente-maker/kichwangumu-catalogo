@@ -31,5 +31,5 @@ dist-ssr
 .env
 .env.*
 
-# IMPORTANTE: No ignorar la carpeta API (El signo ! fuerza su inclusión)
+# IMPORTANTE: Forzar inclusión de carpeta api
 !api/
