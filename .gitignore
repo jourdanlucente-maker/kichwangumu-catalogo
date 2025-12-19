@@ -1,35 +1,6 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Node modules
 node_modules
 dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs
-*.njsproj
-*.sln
-*.sw?
-
-# Vercel
-.vercel
-
-# Environment variables (IMPORTANTE: nunca subir .env)
 .env
-.env.*
-
-# IMPORTANTE: Forzar inclusión de carpeta api
-!api/
+.DS_Store
+.vercel
+*.local
