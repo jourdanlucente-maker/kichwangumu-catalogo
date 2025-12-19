@@ -1,27 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllProducts } from '../services/mockData';
-import { QrCodeIcon, XMarkIcon, ExclamationCircleIcon, GlobeAltIcon, WifiIcon } from '@heroicons/react/24/outline';
+import { QrCodeIcon, XMarkIcon, GlobeAmericasIcon, LinkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 const HomePage: React.FC = () => {
   const products = getAllProducts();
   const [showQrTools, setShowQrTools] = useState(false);
   
-  // Network State
-  const [mode, setMode] = useState<'local' | 'domain'>('local');
-  const [customIp, setCustomIp] = useState(window.location.hostname);
-  const [port, setPort] = useState(window.location.port || '5173');
-  const [customDomain, setCustomDomain] = useState('https://barbarayjourdan.com');
+  // URL DE PRODUCCIÓN DEFINITIVA
+  const PRODUCTION_URL = "https://kichwangumu-catalogo.vercel.app";
 
-  // Helper to generate the actual network link
+  // Lógica: Si no hay nada guardado, usar la de producción.
+  const [baseUrl, setBaseUrl] = useState(() => {
+    const saved = localStorage.getItem('kichwa_public_url');
+    // Prioridad: Lo guardado > Producción > Local (fallback)
+    return saved || PRODUCTION_URL;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('kichwa_public_url', baseUrl);
+  }, [baseUrl]);
+
+  const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('192.168');
+
   const getLink = (id: string) => {
-    if (mode === 'domain') {
-        // Remove trailing slash if user added it
-        const base = customDomain.replace(/\/$/, '');
-        return `${base}/#/product/${id}`;
-    }
-    const protocol = window.location.protocol;
-    return `${protocol}//${customIp}:${port}/#/product/${id}`;
+    const cleanBase = baseUrl.replace(/\/$/, '');
+    return `${cleanBase}/#/product/${id}`;
   };
 
   return (
@@ -34,7 +38,7 @@ const HomePage: React.FC = () => {
       </div>
       
       {/* =========================================================
-          HERRAMIENTAS DE PRUEBA (QR GENERATOR)
+          HERRAMIENTAS DE ADMIN (QR GENERATOR)
          ========================================================= */}
       <div className="flex justify-center mb-6">
         <button 
@@ -48,99 +52,83 @@ const HomePage: React.FC = () => {
           `}
         >
            {showQrTools ? <XMarkIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />}
-           <span>{showQrTools ? "Ocultar Herramientas QR" : "Generar QRs para la Expo"}</span>
+           <span>{showQrTools ? "Cerrar Panel QR" : "Generar QRs para Exposición"}</span>
         </button>
       </div>
 
       {showQrTools && (
         <div className="bg-surface border border-accent/30 p-6 rounded-xl mb-10 animate-fade-in shadow-2xl">
-          <div className="mb-6 border-b border-border pb-6">
-            <h3 className="text-accent font-bold text-lg mb-2">Generador de Códigos QR</h3>
+          <div className="mb-6 border-b border-border pb-6 space-y-4">
+            <h3 className="text-accent font-bold text-lg flex items-center gap-2">
+              <GlobeAmericasIcon className="w-6 h-6" />
+              Configurar URL Pública
+            </h3>
             
-            <div className="flex gap-4 mb-4">
-                <button 
-                    onClick={() => setMode('local')}
-                    className={`flex-1 py-2 px-4 rounded border flex items-center justify-center gap-2 text-xs uppercase font-bold ${mode === 'local' ? 'bg-white text-black border-white' : 'border-border text-muted'}`}
-                >
-                    <WifiIcon className="w-4 h-4" /> Pruebas WiFi Local
-                </button>
-                <button 
-                    onClick={() => setMode('domain')}
-                    className={`flex-1 py-2 px-4 rounded border flex items-center justify-center gap-2 text-xs uppercase font-bold ${mode === 'domain' ? 'bg-white text-black border-white' : 'border-border text-muted'}`}
-                >
-                    <GlobeAltIcon className="w-4 h-4" /> Dominio Real
-                </button>
+            <div className="bg-blue-900/20 border border-blue-800 p-4 rounded text-xs text-blue-100 space-y-2">
+              <p className="font-bold text-sm">Configuración Lista</p>
+              <p>
+                Los códigos QR están configurados para apuntar a: <br/>
+                <strong className="text-accent">{PRODUCTION_URL}</strong>
+              </p>
             </div>
 
-            {mode === 'local' ? (
-                <div className="flex gap-4 max-w-md animate-fade-in">
-                <div className="flex-1">
-                    <label className="text-[10px] uppercase text-muted tracking-wider">Tu IP Local</label>
-                    <input 
-                    type="text" 
-                    value={customIp}
-                    onChange={(e) => setCustomIp(e.target.value)}
-                    className="w-full bg-black border border-border rounded px-3 py-2 text-white focus:border-accent outline-none"
-                    />
+            <div>
+              <label className="text-[10px] uppercase text-muted tracking-wider block mb-2">
+                Dirección Web (Editable)
+              </label>
+              <div className="flex items-center gap-2 bg-black border border-border rounded px-3 py-2 focus-within:border-accent">
+                <LinkIcon className="w-4 h-4 text-muted" />
+                <input 
+                  type="text" 
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  className="flex-1 bg-transparent text-white outline-none font-mono text-sm"
+                />
+              </div>
+              
+              {isLocal && (
+                <div className="flex items-start gap-2 mt-3 text-yellow-500 bg-yellow-500/10 p-2 rounded">
+                  <ExclamationTriangleIcon className="w-5 h-5 shrink-0" />
+                  <p className="text-[10px] font-bold">
+                    Estás usando una dirección local. Los QR no funcionarán públicamente.
+                    <button onClick={() => setBaseUrl(PRODUCTION_URL)} className="underline ml-1 text-white">Restablecer a Vercel</button>
+                  </p>
                 </div>
-                <div className="w-24">
-                    <label className="text-[10px] uppercase text-muted tracking-wider">Puerto</label>
-                    <input 
-                    type="text" 
-                    value={port}
-                    onChange={(e) => setPort(e.target.value)}
-                    className="w-full bg-black border border-border rounded px-3 py-2 text-white focus:border-accent outline-none"
-                    />
-                </div>
-                </div>
-            ) : (
-                <div className="animate-fade-in">
-                    <label className="text-[10px] uppercase text-muted tracking-wider">Tu Dominio Final (Ej: kichwangumu.com)</label>
-                    <input 
-                    type="text" 
-                    value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
-                    placeholder="https://tudominio.com"
-                    className="w-full bg-black border border-border rounded px-3 py-2 text-white focus:border-accent outline-none"
-                    />
-                     <p className="text-xs text-muted mt-2">
-                        Usa esto para descargar los QRs que imprimirás para la exposición real.
-                    </p>
-                </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {products.map(p => {
               const link = getLink(p.id);
+              // API externa para generar QR
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}&bgcolor=FFFFFF&color=000000&margin=10&format=jpg`;
               
               return (
                 <div key={p.id} className="flex gap-4 items-center bg-black/50 p-3 rounded-lg border border-border group">
-                   <div className="bg-white p-1 rounded shrink-0 relative">
+                   <div className="bg-white p-1 rounded shrink-0 relative group-hover:scale-105 transition-transform">
                      <img src={qrUrl} alt="QR" className="w-24 h-24" />
-                     {/* Download Overlay */}
-                     <a 
-                        href={qrUrl} 
-                        download={`QR_${p.name}.jpg`}
-                        className="absolute inset-0 bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] uppercase font-bold text-center p-1"
-                        target="_blank"
-                        rel="noreferrer"
-                     >
-                        Descargar Imagen
-                     </a>
                    </div>
-                   <div className="overflow-hidden min-w-0">
+                   <div className="overflow-hidden min-w-0 flex-1">
                      <p className="font-bold text-white text-sm truncate">{p.name}</p>
-                     <p className="text-xs text-muted truncate mt-1">{link}</p>
+                     <p className="text-[10px] text-muted truncate mt-1 font-mono">{link}</p>
                      <div className="flex gap-2 mt-2">
+                        <a 
+                            href={qrUrl} 
+                            download={`QR_${p.name}.jpg`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] bg-white text-black px-2 py-1 rounded font-bold hover:bg-gray-200"
+                        >
+                          Descargar JPG
+                        </a>
                         <a 
                             href={link} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-block text-[10px] bg-accent/10 text-accent px-2 py-1 rounded hover:bg-accent hover:text-black transition"
+                            className="text-[10px] border border-border text-muted px-2 py-1 rounded hover:text-white hover:border-white"
                         >
-                        Probar Link
+                          Probar Link
                         </a>
                      </div>
                    </div>
@@ -152,11 +140,11 @@ const HomePage: React.FC = () => {
       )}
 
       {/* =========================================================
-          GRID DE PRODUCTOS (CATÁLOGO NORMAL)
+          GRID DE PRODUCTOS
          ========================================================= */}
       <div className="grid grid-cols-2 gap-4">
         {products.map(product => {
-          // Safe URL encoding logic
+          // Codificación segura para nombres de archivo con espacios y tildes
           const lastSlash = product.imageUrl.lastIndexOf('/');
           const path = product.imageUrl.substring(0, lastSlash + 1);
           const filename = product.imageUrl.substring(lastSlash + 1);
@@ -176,9 +164,9 @@ const HomePage: React.FC = () => {
                 }}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              {/* Fallback if image not found */}
+              {/* Fallback visual si falla la imagen */}
               <div className="hidden absolute inset-0 flex flex-col items-center justify-center text-muted p-2 text-center bg-surface">
-                 <ExclamationCircleIcon className="w-8 h-8 mb-2 text-red-400 opacity-50" />
+                 <XMarkIcon className="w-8 h-8 mb-2 text-red-400 opacity-50" />
                  <span className="text-[10px] uppercase font-bold text-red-300 mb-1">Falta Archivo</span>
                  <span className="text-[9px] leading-tight break-all font-mono opacity-60">public{product.imageUrl}</span>
               </div>

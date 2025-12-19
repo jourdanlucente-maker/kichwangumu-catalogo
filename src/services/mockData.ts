@@ -28,7 +28,7 @@ const PRECIOS_MARCOS_FIJOS: Record<string, number> = {
 };
 
 // =====================================================================
-// 2. MOTORES DE CÁLCULO (Copiados de la lógica Python)
+// 2. MOTORES DE CÁLCULO (Lógica Python portada a TypeScript)
 // =====================================================================
 
 interface Ref { area: number; precio: number; }
@@ -51,7 +51,7 @@ const obtenerPisoVenta = (area: number): number => {
     
     const pendiente = (PRECIO_TARGET - PRECIO_BASE) / (AREA_TARGET - AREA_BASE);
     const extra = (area - AREA_BASE) * pendiente;
-    return Math.min(PRECIO_BASE + extra, 80000); // Intencionalmente como en script (int en python trunca, aqui round para seguridad)
+    return Math.min(PRECIO_BASE + extra, 80000); 
 };
 
 const calcularCostoInteligente = (ancho: number, alto: number, tipo: 'impresion' | 'marco'): number => {
@@ -109,19 +109,26 @@ const generarPreciosVenta = (w: number, h: number): PriceMap => {
 };
 
 // =====================================================================
-// 3. GENERADOR DE VARIANTES (Reglas de Negocio)
+// 3. GENERADOR DE PRODUCTOS
 // =====================================================================
 
-const getPhotoPath = (name: string) => `/photos/${name}.jpg`;
+const slugify = (text: string) => {
+    // Normaliza para URL (id)
+    return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/\s+/g, '-')           
+        .replace(/[^\w\-]+/g, '')       
+        .replace(/\-\-+/g, '-')         
+        .replace(/^-+/, '')             
+        .replace(/-+$/, '');            
+};
+
+// CORRECCIÓN: Usar el nombre EXACTO + .jpg
+const getPhotoPath = (name: string) => `/photos/${name.trim()}.jpg`;
 
 const crearVariante = (nombreVer: string, w: number, h: number): ProductVariant => {
-    // Normalizar orientación para SKU
-    const wS = Math.min(w, h);
-    const hS = Math.max(w, h); // SKU siempre W menor primero por convención o mantener original?
-    // Mantendremos WxH tal cual entra para la lógica visual
-    
-    // Generar SKU simple
-    const skuCode = nombreVer.substring(0,3).toUpperCase() + `_${w}x${h}`;
+    // Generar SKU
+    const skuCode = nombreVer.substring(0,3).toUpperCase().replace(/\s/g,'') + `_${w}x${h}`;
     
     return {
         sku: skuCode + "_" + Math.random().toString(36).substr(2,5),
@@ -132,40 +139,38 @@ const crearVariante = (nombreVer: string, w: number, h: number): ProductVariant 
     };
 };
 
-const generarProducto = (id: string, nombre: string, isFeline: boolean): Product => {
+const generarProducto = (nombre: string): Product => {
     const nombreLower = nombre.toLowerCase();
+    
+    // Auto-detectar flags
+    const isFeline = ['leon','león','leona','guepardo','leopardo','tigre','gato','felino','cheetah'].some(x => nombreLower.includes(x));
+    
     const variants: ProductVariant[] = [];
 
-    // --- LÓGICA V38 ---
+    // --- REGLAS DE VARIANTES (SEGÚN SCRIPT V38) ---
 
-    // 1. ABUELA MASÁI (Caso Especial)
+    // 1. ABUELA MASÁI
     if (nombre === "ABUELA MASÁI") {
         variants.push(crearVariante("Original", 50, 62.5));
         variants.push(crearVariante("Std 2:3", 30, 45));
         variants.push(crearVariante("Std 2:3", 20, 30));
     }
-    // 2. OTROS MASÁI
+    // 2. OTROS MASÁI (Verticales preferentemente)
     else if (nombreLower.includes('masai') || nombreLower.includes('masái')) {
-        // En script: se toma original, y se añaden 30x45 y 20x30
-        // Asumiremos orientación vertical por defecto para Masai en general, o ajustamos
-        variants.push(crearVariante("Std 2:3", 30, 45));
-        variants.push(crearVariante("Std 2:3", 20, 30));
+        variants.push(crearVariante("Original", 30, 45));
+        variants.push(crearVariante("Pequeño", 20, 30));
     }
     // 3. BÚFALO (Panorámico)
     else if (nombreLower.includes('búfalo') || nombreLower.includes('bufalo')) {
-        variants.push(crearVariante("Panorámica", 50, 80)); // Asumiendo horizontal
+        variants.push(crearVariante("Panorámica", 50, 80));
         variants.push(crearVariante("Std 2:3", 40, 60));
         variants.push(crearVariante("Std 2:3", 30, 45));
-        variants.push(crearVariante("Std 2:3", 20, 30));
     }
-    // 4. LEOPARDO (Regla 3:4)
+    // 4. LEOPARDO (Regla 3:4 preferente)
     else if (nombreLower.includes('leopardo')) {
         const noAgrandar = nombreLower.includes('negro') || nombreLower.includes('retrato') || nombreLower.includes('guiño');
-        
-        // 45x60
-        if (!noAgrandar) {
-             variants.push(crearVariante("Std 3:4", 45, 60));
-        }
+        // Si no es restringido, ofrecemos grande 3:4
+        if (!noAgrandar) variants.push(crearVariante("Std 3:4", 45, 60));
         variants.push(crearVariante("Std 3:4", 30, 40));
         variants.push(crearVariante("Std 3:4", 21, 28));
     }
@@ -175,64 +180,65 @@ const generarProducto = (id: string, nombre: string, isFeline: boolean): Product
         variants.push(crearVariante("Std 2:3", 60, 90));
         variants.push(crearVariante("Std 2:3", 40, 60));
     }
-    // 6. POR DEFECTO (Std 2:3 - La mayoría de fotos safari)
+    // 6. DEFAULT (Std 2:3 - Safari Standard)
     else {
-        // Asumiremos que la mayoría entra en la lógica 2:3
+        // Asumimos que la mayoría son apaisadas 2:3
         variants.push(crearVariante("Std 2:3", 60, 90));
         variants.push(crearVariante("Std 2:3", 40, 60));
         variants.push(crearVariante("Std 2:3", 20, 30));
     }
 
     return {
-        id,
-        name: nombre,
-        imageUrl: getPhotoPath(nombre),
+        id: slugify(nombre), // URL amigable (slug)
+        name: nombre,        // Nombre visual
+        imageUrl: getPhotoPath(nombre), // Nombre de archivo EXACTO (.jpg)
         isFeline,
         variants
     };
 };
 
 // =====================================================================
-// 4. CATÁLOGO DEFINITIVO
+// 4. CATÁLOGO COMPLETO (36 OBRAS)
 // =====================================================================
 
 export const CATALOG: Product[] = [
-    generarProducto("abuela-masai", "ABUELA MASÁI", false),
-    generarProducto("retrato-bufalo", "RETRATO DE BÚFALO", false),
-    generarProducto("estampida", "ESTAMPIDA", false),
-    generarProducto("cebras-peleando", "CEBRAS PELEANDO", false),
-    generarProducto("hipopotamo-solitario", "HIPOPÓTAMO SOLITARIO", false),
-    generarProducto("perfil-de-leon", "PERFIL DE LEÓN", true),
-    generarProducto("guepardo-cria", "GUEPARDO CON SU CRÍA", true),
-    generarProducto("guino-leopardo", "GUIÑO DE LEOPARDO", true),
-    generarProducto("cachorros-guepardo", "CACHORROS DE GUEPARDO", true),
-    generarProducto("leona-lluvia", "LEONA BAJO LA LLUVIA", true),
-    generarProducto("leopardo-presa", "LEOPARDO CON PRESA", true),
-    generarProducto("babuino-lluvia", "BABUINO BAJO LA LLUVIA", false),
-    generarProducto("mono-verde", "RETRATO DE MONO VERDE", false),
-    generarProducto("impala-acacia", "IMPALA Y ACACIA", false),
-    generarProducto("la-huida", "LA HUIDA", false),
-    generarProducto("el-ataque", "EL ATAQUE", false),
-    generarProducto("antes-del-cruce", "ANTES DEL CRUCE", false),
-    generarProducto("cebra-amamantando", "CEBRA AMAMANTANDO", false),
-    generarProducto("cebra-bebe", "CEBRA BEBÉ", false),
-    generarProducto("retrato-leopardo", "RETRATO DE LEOPARDO", true),
-    generarProducto("retrato-leon", "RETRATO DE LEÓN", true),
-    generarProducto("pareja-leones", "PAREJA DE LEONES", true),
-    generarProducto("retrato-jirafa", "RETRATO DE JIRAFA", false),
-    generarProducto("hippo-rio", "HIPOPÓTAMO EN EL RÍO", false),
-    generarProducto("topi", "TOPI", false),
-    generarProducto("dos-elefantes", "DOS ELEFANTES", false),
-    generarProducto("leopardo-arbol", "LEOPARDO SOBRE ÁRBOL", true),
-    generarProducto("leopardo-nakuru", "LEOPARDO EN NAKURU", true),
-    generarProducto("elefante-macho", "ELEFANTE MACHO", false),
-    generarProducto("elefantes-atardecer", "ELEFANTES AL ATARDECER", false),
-    generarProducto("manada-elefantes", "MANADA DE ELEFANTES", false),
-    generarProducto("grupo-nus", "GRUPO DE ÑUS", false),
-    generarProducto("jirafa-bebiendo", "JIRAFA BEBIENDO", false),
-    generarProducto("98-anos", "98 AÑOS DE MASÁI", false),
-    generarProducto("caminar-masai", "CAMINAR MASÁI", false),
-    generarProducto("mirada-masai", "MIRADA MASÁI", false)
+    // Usamos EXACTAMENTE los nombres que entregó el usuario
+    generarProducto("RETRATO DE BÚFALO"),
+    generarProducto("ELEFANTE MACHO"),
+    generarProducto("GRUPO DE ÑUS"),
+    generarProducto("ANTES DEL CRUCE"),
+    generarProducto("EL ATAQUE"),
+    generarProducto("LA HUIDA"),
+    generarProducto("CEBRAS PELEANDO"),
+    generarProducto("ESTAMPIDA"),
+    generarProducto("RETRATO DE LEÓN"),
+    generarProducto("RETRATO DE LEOPARDO"),
+    generarProducto("CACHORROS DE GUEPARDO"),
+    generarProducto("LEONA BAJO LA LLUVIA"),
+    generarProducto("LEOPARDO CON PRESA"),
+    generarProducto("TOPI"),
+    generarProducto("HIPOPÓTAMO SOLITARIO"),
+    generarProducto("JIRAFA BEBIENDO"),
+    generarProducto("98 AÑOS DE MASÁI"),
+    generarProducto("ABUELA MASÁI"),
+    generarProducto("MIRADA MASÁI"),
+    generarProducto("CAMINAR MASÁI"),
+    generarProducto("PAREJA DE LEONES"),
+    generarProducto("GUEPARDO CON SU CRÍA"),
+    generarProducto("DOS ELEFANTES"),
+    generarProducto("CEBRA AMAMANTANDO"),
+    generarProducto("CEBRA BEBÉ"),
+    generarProducto("GUIÑO DE LEOPARDO"),
+    generarProducto("BABUINO BAJO LA LLUVIA"),
+    generarProducto("IMPALA Y ACACIA"),
+    generarProducto("RETRATO DE MONO VERDE"),
+    generarProducto("PERFIL DE LEÓN"),
+    generarProducto("ELEFANTES AL ATARDECER"),
+    generarProducto("RETRATO DE JIRAFA"),
+    generarProducto("HIPOPÓTAMO EN EL RÍO"),
+    generarProducto("LEOPARDO SOBRE ÁRBOL"),
+    generarProducto("LEOPARDO EN NAKURU"),
+    generarProducto("MANADA DE ELEFANTES")
 ];
 
 export const getProductById = (id: string): Product | undefined => {
