@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CartItem, DiscountResult } from '../types';
 import { calculateTotals, formatMoney, getMaterialLabel } from '../services/cartLogic';
-import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface CartPageProps {
   items: CartItem[];
@@ -15,12 +15,12 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
   const calculation: DiscountResult = calculateTotals(items);
   const [loadingPay, setLoadingPay] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
 
   // Detectar retorno exitoso de Mercado Pago
-  // MP agrega parámetros a la URL cuando vuelve: ?collection_status=approved
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status') || params.get('collection_status');
@@ -28,20 +28,20 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
     if (status === 'approved' || status === 'success') {
       setPaymentSuccess(true);
       onClearCart();
-      // Limpiamos la URL para no volver a procesar si el usuario recarga
+      // Limpiamos la URL para no volver a procesar
       navigate('/cart', { replace: true });
     }
   }, [location, onClearCart, navigate]);
 
-  // 1. Lógica de Pago Automático
+  // 1. PAGO: Mercado Pago
   const handleMercadoPago = async () => {
     if (items.length === 0) return;
     setLoadingPay(true);
+    setErrorMessage(null);
 
     try {
       const description = `Pedido Kichwa Ngumu (${calculation.count} obras)`;
       
-      // Llamamos a nuestra API en Vercel
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,23 +51,37 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
         }),
       });
 
-      const data = await response.json();
+      // Intentamos leer la respuesta
+      const contentType = response.headers.get("content-type");
+      let data;
+      
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Respuesta inesperada del servidor (${response.status}): ${text.substring(0, 100)}...`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || `Error del servidor: ${response.status}`);
+      }
       
       if (data.url) {
-        // Redirigimos al usuario a Mercado Pago
         window.location.href = data.url;
       } else {
-        alert("Hubo un error iniciando el pago. Intenta más tarde.");
+        throw new Error("No se recibió la URL de pago.");
       }
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Error pago:", error);
-      alert("Error de conexión. Revisa tu internet.");
+      // Mostramos el error real en pantalla
+      setErrorMessage(error.message || "Error desconocido de conexión");
     } finally {
       setLoadingPay(false);
     }
   };
 
-  // 2. Lógica Manual (WhatsApp)
+  // 2. COORDINACIÓN: WhatsApp
   const handleWhatsApp = () => {
     if (items.length === 0) return;
 
@@ -89,10 +103,9 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     window.location.href = url;
   };
 
-  // Pantalla de Éxito
   if (paymentSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in">
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
         <div className="w-24 h-24 bg-green-900/30 rounded-full flex items-center justify-center border border-green-500/50 text-green-400">
           <CheckCircleIcon className="w-12 h-12" />
         </div>
@@ -112,7 +125,6 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     );
   }
 
-  // Carrito Vacío
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
@@ -127,7 +139,6 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     );
   }
 
-  // Safe URL encoding helper
   const getSafeSrc = (url: string) => {
     const lastSlash = url.lastIndexOf('/');
     const path = url.substring(0, lastSlash + 1);
@@ -136,10 +147,9 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
   };
 
   return (
-    <div className="space-y-8 pb-48"> {/* Padding extra para botones fijos */}
+    <div className="space-y-8 pb-48"> 
       <h2 className="text-2xl font-light border-b border-border pb-4">Tu Pedido</h2>
 
-      {/* Item List */}
       <div className="space-y-4">
         {items.map((item) => (
           <div key={item.cartId} className="flex gap-4 bg-surface p-4 rounded-lg border border-border">
@@ -175,7 +185,6 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
         ))}
       </div>
 
-      {/* Resumen de Totales y Descuentos */}
       <div className="bg-surface rounded-xl p-6 border border-border space-y-4">
         <div className="flex justify-between text-muted">
           <span>Subtotal</span>
@@ -203,11 +212,21 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
         </div>
       </div>
 
-      {/* Botones Fijos Abajo */}
+      {/* ERROR DISPLAY */}
+      {errorMessage && (
+        <div className="bg-red-900/20 border border-red-500/50 p-4 rounded-lg flex gap-3 items-start animate-fade-in">
+           <ExclamationTriangleIcon className="w-6 h-6 text-red-500 flex-shrink-0" />
+           <div>
+             <p className="text-white font-bold text-sm">No se pudo iniciar el pago</p>
+             <p className="text-red-200 text-xs mt-1 font-mono break-all">{errorMessage}</p>
+             <p className="text-xs text-muted mt-2">Prueba usando el botón de WhatsApp si el problema persiste.</p>
+           </div>
+        </div>
+      )}
+
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4 z-40 shadow-2xl">
         <div className="max-w-3xl mx-auto space-y-3">
           
-          {/* Botón Principal: Mercado Pago */}
           <button
             onClick={handleMercadoPago}
             disabled={loadingPay}
@@ -227,7 +246,6 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
             )}
           </button>
 
-          {/* Botón Secundario: WhatsApp */}
           <button
             onClick={handleWhatsApp}
             disabled={loadingPay}
