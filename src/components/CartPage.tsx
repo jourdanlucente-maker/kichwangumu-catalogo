@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CartItem, DiscountResult } from '../types';
 import { calculateTotals, formatMoney, getMaterialLabel } from '../services/cartLogic';
-import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon, ExclamationTriangleIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface CartPageProps {
   items: CartItem[];
@@ -14,21 +14,28 @@ interface CartPageProps {
 const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, whatsappNumber }) => {
   const calculation: DiscountResult = calculateTotals(items);
   const [loadingPay, setLoadingPay] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'none' | 'success' | 'failure' | 'pending'>('none');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Detectar retorno exitoso de Mercado Pago
+  // Detectar retorno de Mercado Pago
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status') || params.get('collection_status');
     
-    if (status === 'approved' || status === 'success') {
-      setPaymentSuccess(true);
-      onClearCart();
-      // Limpiamos la URL para no volver a procesar
+    if (status) {
+      if (status === 'approved' || status === 'success') {
+        setPaymentStatus('success');
+        onClearCart();
+      } else if (status === 'failure' || status === 'rejected') {
+        setPaymentStatus('failure');
+      } else if (status === 'pending' || status === 'in_process') {
+        setPaymentStatus('pending');
+        onClearCart(); // Opcional: limpiar carro si está pendiente, o dejarlo. Generalmente pendiente = compra hecha.
+      }
+      // Limpiar URL para no reprocesar al refrescar
       navigate('/cart', { replace: true });
     }
   }, [location, onClearCart, navigate]);
@@ -51,7 +58,6 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
         }),
       });
 
-      // Intentamos leer la respuesta
       const contentType = response.headers.get("content-type");
       let data;
       
@@ -59,23 +65,22 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
         data = await response.json();
       } else {
         const text = await response.text();
-        throw new Error(`Respuesta inesperada del servidor (${response.status}): ${text.substring(0, 100)}...`);
+        throw new Error(`Error servidor (${response.status}): ${text.slice(0, 50)}...`);
       }
 
       if (!response.ok) {
-        throw new Error(data.error || `Error del servidor: ${response.status}`);
+        throw new Error(data.error || `Error ${response.status}`);
       }
       
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error("No se recibió la URL de pago.");
+        throw new Error("No se recibió link de pago.");
       }
 
     } catch (error: any) {
       console.error("Error pago:", error);
-      // Mostramos el error real en pantalla
-      setErrorMessage(error.message || "Error desconocido de conexión");
+      setErrorMessage(error.message || "Error de conexión");
     } finally {
       setLoadingPay(false);
     }
@@ -103,7 +108,9 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     window.location.href = url;
   };
 
-  if (paymentSuccess) {
+  // --- PANTALLAS DE ESTADO ---
+
+  if (paymentStatus === 'success') {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
         <div className="w-24 h-24 bg-green-900/30 rounded-full flex items-center justify-center border border-green-500/50 text-green-400">
@@ -116,7 +123,7 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
           </p>
         </div>
         <button 
-          onClick={() => setPaymentSuccess(false)}
+          onClick={() => setPaymentStatus('none')}
           className="mt-8 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
         >
           Volver al Catálogo
@@ -125,6 +132,59 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     );
   }
 
+  if (paymentStatus === 'pending') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
+        <div className="w-24 h-24 bg-yellow-900/30 rounded-full flex items-center justify-center border border-yellow-500/50 text-yellow-400">
+          <ClockIcon className="w-12 h-12" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Pago Pendiente</h2>
+          <p className="text-muted mt-4 max-w-sm mx-auto">
+            Tu pago se está procesando. Te avisaremos apenas se confirme.
+          </p>
+        </div>
+        <button 
+          onClick={() => setPaymentStatus('none')}
+          className="mt-8 px-8 py-3 bg-surface border border-white text-white rounded-full font-bold hover:bg-white/10 transition"
+        >
+          Volver
+        </button>
+      </div>
+    );
+  }
+
+  if (paymentStatus === 'failure') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
+        <div className="w-24 h-24 bg-red-900/30 rounded-full flex items-center justify-center border border-red-500/50 text-red-400">
+          <XCircleIcon className="w-12 h-12" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Pago Rechazado</h2>
+          <p className="text-muted mt-4 max-w-sm mx-auto">
+            Hubo un problema con el pago. Por favor intenta con otro medio o contáctanos.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 mt-8 w-full max-w-xs">
+            <button 
+            onClick={() => setPaymentStatus('none')}
+            className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
+            >
+            Intentar Nuevamente
+            </button>
+            <button 
+            onClick={handleWhatsApp}
+            className="px-8 py-3 bg-surface border border-border text-white rounded-full font-bold hover:bg-surface/80 transition"
+            >
+            Hablar por WhatsApp
+            </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- CARRITO VACÍO ---
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
@@ -217,9 +277,8 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
         <div className="bg-red-900/20 border border-red-500/50 p-4 rounded-lg flex gap-3 items-start animate-fade-in">
            <ExclamationTriangleIcon className="w-6 h-6 text-red-500 flex-shrink-0" />
            <div>
-             <p className="text-white font-bold text-sm">No se pudo iniciar el pago</p>
+             <p className="text-white font-bold text-sm">Error en el proceso</p>
              <p className="text-red-200 text-xs mt-1 font-mono break-all">{errorMessage}</p>
-             <p className="text-xs text-muted mt-2">Prueba usando el botón de WhatsApp si el problema persiste.</p>
            </div>
         </div>
       )}

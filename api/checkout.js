@@ -1,9 +1,7 @@
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 export default async function handler(req, res) {
-  console.log(`[API V3] Request recibido: ${req.method} en ${req.url}`);
-
-  // Configuración CORS manual y agresiva
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -14,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed', received: req.method });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const accessToken = process.env.MP_ACCESS_TOKEN;
@@ -27,8 +25,14 @@ export default async function handler(req, res) {
     const client = new MercadoPagoConfig({ accessToken: accessToken });
     const { total, description } = req.body;
 
+    // Validación estricta para Producción
+    if (!total || isNaN(Number(total)) || Number(total) <= 0) {
+       return res.status(400).json({ error: 'El monto total es inválido.' });
+    }
+
     const origin = req.headers.origin || 'https://kichwangumu-catalogo.vercel.app';
-    
+    const cleanDesc = description ? String(description).substring(0, 250) : "Compra Kichwa Ngumu";
+
     // Crear preferencia
     const preference = new Preference(client);
     const result = await preference.create({
@@ -36,9 +40,9 @@ export default async function handler(req, res) {
         items: [
           {
             id: 'pedido-kichwa',
-            title: description,
+            title: cleanDesc,
             quantity: 1,
-            unit_price: Number(total),
+            unit_price: Number(total), // Asegurar que sea número
             currency_id: 'CLP'
           }
         ],
@@ -47,7 +51,8 @@ export default async function handler(req, res) {
           failure: `${origin}/#/cart?status=failure`,
           pending: `${origin}/#/cart?status=pending`
         },
-        auto_return: 'approved'
+        auto_return: 'approved',
+        statement_descriptor: "KICHWA NGUMU"
       }
     });
 
