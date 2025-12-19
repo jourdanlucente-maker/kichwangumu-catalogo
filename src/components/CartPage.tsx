@@ -1,21 +1,76 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CartItem, DiscountResult } from '../types';
 import { calculateTotals, formatMoney, getMaterialLabel } from '../services/cartLogic';
-import { TrashIcon, ArrowRightIcon, StarIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 interface CartPageProps {
   items: CartItem[];
   onRemoveItem: (id: string) => void;
+  onClearCart: () => void;
   whatsappNumber: string;
 }
 
-const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, whatsappNumber }) => {
+const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, whatsappNumber }) => {
   const calculation: DiscountResult = calculateTotals(items);
+  const [loadingPay, setLoadingPay] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const handleCheckout = () => {
+  // Detectar retorno exitoso de Mercado Pago
+  // MP agrega parámetros a la URL cuando vuelve: ?collection_status=approved
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status') || params.get('collection_status');
+    
+    if (status === 'approved' || status === 'success') {
+      setPaymentSuccess(true);
+      onClearCart();
+      // Limpiamos la URL para no volver a procesar si el usuario recarga
+      navigate('/cart', { replace: true });
+    }
+  }, [location, onClearCart, navigate]);
+
+  // 1. Lógica de Pago Automático
+  const handleMercadoPago = async () => {
+    if (items.length === 0) return;
+    setLoadingPay(true);
+
+    try {
+      const description = `Pedido Kichwa Ngumu (${calculation.count} obras)`;
+      
+      // Llamamos a nuestra API en Vercel
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          total: calculation.total,
+          description: description
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.url) {
+        // Redirigimos al usuario a Mercado Pago
+        window.location.href = data.url;
+      } else {
+        alert("Hubo un error iniciando el pago. Intenta más tarde.");
+      }
+    } catch (error) {
+      console.error("Error pago:", error);
+      alert("Error de conexión. Revisa tu internet.");
+    } finally {
+      setLoadingPay(false);
+    }
+  };
+
+  // 2. Lógica Manual (WhatsApp)
+  const handleWhatsApp = () => {
     if (items.length === 0) return;
 
-    // Construct Message
     const lines = items.map(item => 
       `- ${item.productName} (${item.dimensions}) [${getMaterialLabel(item.material)}]`
     ).join('\n');
@@ -28,12 +83,36 @@ ${lines}
 ${calculation.label !== 'NO APLICA PACK' ? `Pack Aplicado: ${calculation.label}\n` : ''}
 Total a Pagar: ${formatMoney(calculation.total)}
 
-Quedo atento al link de pago. Gracias!`;
+Prefiero coordinar transferencia o tengo una duda. Gracias!`;
 
     const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     window.location.href = url;
   };
 
+  // Pantalla de Éxito
+  if (paymentSuccess) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in">
+        <div className="w-24 h-24 bg-green-900/30 rounded-full flex items-center justify-center border border-green-500/50 text-green-400">
+          <CheckCircleIcon className="w-12 h-12" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">¡Pago Exitoso!</h2>
+          <p className="text-muted mt-4 max-w-sm mx-auto">
+            Muchas gracias por tu compra. Te contactaremos a la brevedad para coordinar la entrega.
+          </p>
+        </div>
+        <button 
+          onClick={() => setPaymentSuccess(false)}
+          className="mt-8 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
+        >
+          Volver al Catálogo
+        </button>
+      </div>
+    );
+  }
+
+  // Carrito Vacío
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
@@ -57,7 +136,7 @@ Quedo atento al link de pago. Gracias!`;
   };
 
   return (
-    <div className="space-y-8 pb-32">
+    <div className="space-y-8 pb-48"> {/* Padding extra para botones fijos */}
       <h2 className="text-2xl font-light border-b border-border pb-4">Tu Pedido</h2>
 
       {/* Item List */}
@@ -96,14 +175,13 @@ Quedo atento al link de pago. Gracias!`;
         ))}
       </div>
 
-      {/* Summary Logic */}
+      {/* Resumen de Totales y Descuentos */}
       <div className="bg-surface rounded-xl p-6 border border-border space-y-4">
         <div className="flex justify-between text-muted">
           <span>Subtotal</span>
           <span>{formatMoney(calculation.subtotal)}</span>
         </div>
 
-        {/* Info about pack progress */}
         {calculation.discountRate === 0 && (
            <div className="text-xs text-muted text-center py-2 bg-black/20 rounded">
              {calculation.count < 3 && `Agrega ${3 - calculation.count} obras más para 15% OFF`}
@@ -125,22 +203,40 @@ Quedo atento al link de pago. Gracias!`;
         </div>
       </div>
 
-      <div className="bg-blue-900/20 border border-blue-900/50 p-4 rounded-lg text-sm text-blue-200">
-        <p>
-          <strong>Nota:</strong> Al presionar "Encargar", se abrirá WhatsApp con el detalle para coordinar el pago y envío directamente con nosotros.
-        </p>
-      </div>
-
-      {/* Fixed Checkout Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border p-4 z-40">
-        <div className="max-w-3xl mx-auto">
+      {/* Botones Fijos Abajo */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4 z-40 shadow-2xl">
+        <div className="max-w-3xl mx-auto space-y-3">
+          
+          {/* Botón Principal: Mercado Pago */}
           <button
-            onClick={handleCheckout}
-            className="w-full py-4 bg-white text-black rounded-full font-bold uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-gray-200 transition-colors"
+            onClick={handleMercadoPago}
+            disabled={loadingPay}
+            className={`
+              w-full py-3.5 bg-white text-black rounded-full font-bold uppercase tracking-widest 
+              flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors
+              ${loadingPay ? 'opacity-70 cursor-wait' : ''}
+            `}
           >
-            Encargar por WhatsApp
-            <ArrowRightIcon className="w-5 h-5" />
+            {loadingPay ? (
+              <span>Procesando...</span>
+            ) : (
+              <>
+                <CreditCardIcon className="w-5 h-5" />
+                Pagar Ahora
+              </>
+            )}
           </button>
+
+          {/* Botón Secundario: WhatsApp */}
+          <button
+            onClick={handleWhatsApp}
+            disabled={loadingPay}
+            className="w-full py-3 border border-border bg-surface text-muted hover:text-white hover:border-white rounded-full font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+          >
+            <ChatBubbleLeftIcon className="w-5 h-5" />
+            ¿Dudas? Hablar por WhatsApp
+          </button>
+
         </div>
       </div>
     </div>

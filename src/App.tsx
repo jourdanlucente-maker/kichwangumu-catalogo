@@ -72,6 +72,10 @@ const App: React.FC = () => {
     setCartItems(prev => prev.filter(item => item.cartId !== cartId));
   };
 
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
   // --- RENDER ---
 
   if (loading) {
@@ -120,7 +124,8 @@ const App: React.FC = () => {
             element={
               <CartPage 
                 items={cartItems} 
-                onRemoveItem={removeItem} 
+                onRemoveItem={removeItem}
+                onClearCart={clearCart}
                 whatsappNumber={WHATSAPP_NUMBER}
               />
             } 
