@@ -31,14 +31,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const data = await fetchCatalog();
-      if (data.length === 0) {
-        setError("No se pudieron cargar los productos. Verifica que la hoja de cálculo esté publicada en la web.");
-      } else {
+      try {
+        const data = await fetchCatalog();
         setProducts(data);
         setError(null);
+      } catch (err: any) {
+        // Mostrar mensaje de error real
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadData();
   }, []);
@@ -80,15 +83,25 @@ const App: React.FC = () => {
     );
   }
 
-  if (error && products.length === 0) {
+  if (error) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-white p-8 text-center space-y-6">
-        <ExclamationTriangleIcon className="w-16 h-16 text-red-500" />
-        <h1 className="text-xl font-bold">Error de Conexión</h1>
-        <p className="text-muted max-w-md">{error}</p>
-        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-white text-black rounded-full font-bold">
-          Reintentar
-        </button>
+        <div className="bg-surface p-6 rounded-xl border border-red-900/50 max-w-md w-full">
+          <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-xl font-bold mb-2">Error de Conexión</h1>
+          <p className="text-sm text-red-200 bg-red-900/20 p-3 rounded font-mono break-words">
+            {error}
+          </p>
+          <p className="text-xs text-muted mt-4 mb-6">
+            Intenta recargar. Si el problema persiste, verifica que el Excel esté "Publicado en la Web" (formato CSV) y tenga las columnas correctas (Foto, SKU, Precios).
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="w-full px-6 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }
@@ -97,7 +110,6 @@ const App: React.FC = () => {
     <HashRouter>
       <Layout cartItemCount={cartItems.length}>
         <Routes>
-          {/* AQUÍ ESTABA EL ERROR: Pasamos 'products' como props */}
           <Route path="/" element={<HomePage products={products} />} />
           <Route 
             path="/product/:id" 
