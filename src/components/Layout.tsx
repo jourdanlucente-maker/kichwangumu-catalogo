@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBagIcon, HomeIcon } from '@heroicons/react/24/outline';
-import { CartItem } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -45,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount }) => {
 
       {/* Footer */}
       <footer className="py-8 text-center text-sm text-muted border-t border-border mt-auto">
-        <p>© 2024 Kichwangumu Exhibition</p>
+        <p>© 2025 Kichwa Ngumu</p>
         <p className="text-xs mt-1 opacity-50">Photography & Conservation</p>
       </footer>
     </div>

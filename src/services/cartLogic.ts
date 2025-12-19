@@ -51,9 +51,9 @@ export const formatMoney = (amount: number): string => {
 
 export const getMaterialLabel = (mat: MaterialType): string => {
   switch (mat) {
-    case 'imp': return 'Solo Impresión';
-    case 'marco': return 'Enmarcado';
-    case 'ar': return 'Acrílico (AR)';
+    case 'imp': return 'Impresión Fine Art';
+    case 'marco': return 'Enmarcado Negro Minimal';
+    case 'ar': return 'Acrílico (AR)'; // Mantenido por compatibilidad histórica
     default: return mat;
   }
 };

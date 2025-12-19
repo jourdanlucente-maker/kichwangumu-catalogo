@@ -131,12 +131,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
           <h3 className="text-sm font-bold uppercase text-muted tracking-wider">2. Material de Impresión</h3>
           <div className="space-y-2">
             {[
-              { id: 'imp', label: 'Solo Impresión', desc: 'Papel Fine Art' },
-              { id: 'marco', label: 'Enmarcado', desc: 'Madera nativa + Vidrio' },
-              { id: 'ar', label: 'Acrílico (AR)', desc: 'Montaje moderno' }
+              { id: 'imp', label: 'Impresión Fine Art', desc: 'Papel algodón calidad museo' },
+              { id: 'marco', label: 'Enmarcado', desc: 'Negro Minimal + Vidrio' }
             ].map((mat) => {
               const price = selectedVariant.prices[mat.id as MaterialType];
-              if (!price) return null;
+              // Solo mostrar si el precio existe y es mayor a 0
+              if (!price || price <= 0) return null;
 
               return (
               <button
