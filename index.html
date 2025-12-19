@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kichwangumu Exhibition</title>
+    <!-- Using Tailwind CDN for speed and simplicity -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              background: '#0b0c10',
+              surface: '#14161d',
+              border: '#2a2f3a',
+              text: '#f5f5f5',
+              muted: '#8892b0',
+              accent: '#66fcf1',
+              accentHover: '#45a29e',
+            },
+            fontFamily: {
+              sans: ['Helvetica Neue', 'Arial', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #0b0c10;
+        color: #f5f5f5;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "@heroicons/react/": "https://esm.sh/@heroicons/react@^2.2.0/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <!-- Pointing to the file inside src/ folder -->
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
