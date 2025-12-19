@@ -1,6 +1,15 @@
+# Dependencias y build
 node_modules
 dist
-.env
-.DS_Store
 .vercel
-*.local
+
+# Variables de entorno
+.env
+.env.local
+
+# Sistema
+.DS_Store
+
+# REGLA DE ORO: No ignorar la carpeta API
+!api/
+!api/checkout.js
