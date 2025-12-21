@@ -47,14 +47,18 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
     setErrorMessage(null);
 
     try {
-      const description = `Pedido Kichwa Ngumu (${calculation.count} obras)`;
-      
+      // Construir descripción corta para el título (Max chars en MP suele ser limitado, pero intentamos meter lo clave)
+      const shortDesc = `Pedido Kichwa (${items.length}): ` + items.map(i => 
+        `${i.productName.substring(0, 10)}..[${i.dimensions}]`
+      ).join(' + ');
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           total: calculation.total,
-          description: description
+          description: shortDesc,
+          items: items // Enviamos el array completo para procesarlo mejor en el backend
         }),
       });
 
