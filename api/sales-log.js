@@ -56,11 +56,13 @@ export default async function handler(req, res) {
     pagos.forEach(p => {
       const items = p.additional_info?.items || [];
       const fecha = new Date(p.date_created).toLocaleString('es-CL');
+      // USO SEGURO DE PAYER: Si p.payer no existe, usa un objeto vacío para evitar el crash
+      const email = p.payer?.email || 'Email Desconocido';
       
       html += `
         <div class="card">
           <div class="header">
-            <span>${p.payer.email || 'Email Desconocido'}</span>
+            <span>${email}</span>
             <span>ID: ${p.id}</span>
           </div>
           <div class="meta">
