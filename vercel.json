@@ -5,6 +5,10 @@
       "destination": "/api/checkout.js"
     },
     {
+      "source": "/api/sales-log",
+      "destination": "/api/sales-log.js"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
