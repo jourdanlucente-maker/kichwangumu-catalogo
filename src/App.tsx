@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import HomePage from './components/HomePage';
 import ProductPage from './components/ProductPage';
@@ -111,28 +112,31 @@ const App: React.FC = () => {
   }
 
   return (
-    <HashRouter>
-      <Layout cartItemCount={cartItems.length}>
-        <Routes>
-          <Route path="/" element={<HomePage products={products} />} />
-          <Route 
-            path="/product/:id" 
-            element={<ProductPage products={products} onAddToCart={addToCart} />} 
-          />
-          <Route 
-            path="/cart" 
-            element={
-              <CartPage 
-                items={cartItems} 
-                onRemoveItem={removeItem}
-                onClearCart={clearCart}
-                whatsappNumber={WHATSAPP_NUMBER}
-              />
-            } 
-          />
-        </Routes>
-      </Layout>
-    </HashRouter>
+    <>
+      <HashRouter>
+        <Layout cartItemCount={cartItems.length}>
+          <Routes>
+            <Route path="/" element={<HomePage products={products} />} />
+            <Route 
+              path="/product/:id" 
+              element={<ProductPage products={products} onAddToCart={addToCart} />} 
+            />
+            <Route 
+              path="/cart" 
+              element={
+                <CartPage 
+                  items={cartItems} 
+                  onRemoveItem={removeItem}
+                  onClearCart={clearCart}
+                  whatsappNumber={WHATSAPP_NUMBER}
+                />
+              } 
+            />
+          </Routes>
+        </Layout>
+      </HashRouter>
+      <Analytics />
+    </>
   );
 };
 
