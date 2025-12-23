@@ -11,7 +11,8 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount }) => {
   const location = useLocation();
   
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-background text-text">
+    // CAMBIO CLAVE: min-h-[100dvh] en lugar de min-h-screen para corregir barra navegación Safari Mobile
+    <div className="min-h-[100dvh] flex flex-col font-sans bg-background text-text">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">

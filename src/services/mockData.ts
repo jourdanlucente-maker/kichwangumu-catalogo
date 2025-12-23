@@ -1,11 +1,67 @@
 import { Product } from '../types';
 
 // =====================================================================
-// CONFIGURACIÓN DE GOOGLE SHEETS
+// CONFIGURACIÓN
 // =====================================================================
 const SHEET_ID_LONG = "2PACX-1vRbwfXLJyJ8VIP8fwqFZzbeV6PGJ8Ygu8IS1yVRiXG5xJq-6W9zdJGtqvUlAh4NZn6_2knlQh-WoD8c";
 const PUBLISHED_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_LONG}/pub?output=csv`;
-const CACHE_KEY = 'kichwa_catalog_cache_v1';
+const CACHE_KEY = 'kichwa_catalog_cache_v2'; // Incrementamos versión caché
+
+// =====================================================================
+// DATOS DE RESPALDO (FALLBACK)
+// Estos se usarán si falla la conexión a Google Sheets.
+// =====================================================================
+const FALLBACK_RAW_DATA = [
+  {
+    id: "abuela-masai", name: "ABUELA MASÁI", imageUrl: "/photos/ABUELA MASÁI.jpg", isFeline: false,
+    variants: [
+      { sku: "ABU_MAS_50x62.5", versionName: "Original", dimensions: "50x62.5", isBig: true, prices: { imp: 78000, marco: 168000, ar: 218400 } },
+      { sku: "ABU_MAS_40x50", versionName: "Std 4:5", dimensions: "40x50", isBig: false, prices: { imp: 48000, marco: 130000, ar: 169000 } }
+    ]
+  },
+  {
+    id: "leopardo-nakuru", name: "LEOPARDO EN NAKURU", imageUrl: "/photos/LEOPARDO EN NAKURU.jpg", isFeline: true,
+    variants: [
+      { sku: "LEO_NAK_45x60", versionName: "Std 3:4", dimensions: "45x60", isBig: true, prices: { imp: 64000, marco: 156000, ar: 202800 } },
+      { sku: "LEO_NAK_30x40", versionName: "Std 3:4", dimensions: "30x40", isBig: false, prices: { imp: 35800, marco: 96000, ar: 124800 } }
+    ]
+  },
+  {
+    id: "elefante-macho", name: "ELEFANTE MACHO", imageUrl: "/photos/ELEFANTE MACHO.jpg", isFeline: false,
+    variants: [
+      { sku: "ELE_MAC_60x90", versionName: "Std 2:3", dimensions: "60x90", isBig: true, prices: { imp: 110400, marco: 243600, ar: 316700 } },
+      { sku: "ELE_MAC_40x60", versionName: "Std 2:3", dimensions: "40x60", isBig: true, prices: { imp: 57200, marco: 143800, ar: 186900 } }
+    ]
+  },
+  {
+    id: "grupo-nus", name: "GRUPO DE ÑUS", imageUrl: "/photos/GRUPO DE ÑUS.jpg", isFeline: false,
+    variants: [
+      { sku: "GRU_NUS_80x120", versionName: "Gran Formato", dimensions: "80x120", isBig: true, prices: { imp: 196000, marco: 446000, ar: 579800 } },
+      { sku: "GRU_NUS_60x90", versionName: "Std 2:3", dimensions: "60x90", isBig: true, prices: { imp: 110400, marco: 243600, ar: 316700 } }
+    ]
+  },
+  {
+    id: "mirada-masai", name: "MIRADA MASÁI", imageUrl: "/photos/MIRADA MASÁI.jpg", isFeline: false,
+    variants: [
+      { sku: "MIR_MAS_45x60", versionName: "Std 3:4", dimensions: "45x60", isBig: true, prices: { imp: 64000, marco: 156000, ar: 202800 } },
+      { sku: "MIR_MAS_30x40", versionName: "Std 3:4", dimensions: "30x40", isBig: false, prices: { imp: 35800, marco: 96000, ar: 124800 } }
+    ]
+  },
+  {
+    id: "jirafa-bebiendo", name: "JIRAFA BEBIENDO", imageUrl: "/photos/JIRAFA BEBIENDO.jpg", isFeline: false,
+    variants: [
+      { sku: "JIR_BEB_50x75", versionName: "Std 2:3", dimensions: "50x75", isBig: true, prices: { imp: 92000, marco: 181200, ar: 235600 } },
+      { sku: "JIR_BEB_40x60", versionName: "Std 2:3", dimensions: "40x60", isBig: true, prices: { imp: 57200, marco: 143800, ar: 186900 } }
+    ]
+  },
+  {
+    id: "retrato-bufalo", name: "RETRATO DE BÚFALO", imageUrl: "/photos/RETRATO DE BÚFALO.jpg", isFeline: false,
+    variants: [
+      { sku: "RET_BUF_50x80", versionName: "Panorámica", dimensions: "50x80", isBig: true, prices: { imp: 111200, marco: 220000, ar: 286000 } },
+      { sku: "RET_BUF_40x60", versionName: "Std 2:3", dimensions: "40x60", isBig: true, prices: { imp: 57200, marco: 143800, ar: 186900 } }
+    ]
+  }
+];
 
 // =====================================================================
 // UTILIDADES
@@ -27,7 +83,8 @@ const cleanCurrency = (val: string) => {
   return parseInt(clean, 10) || 0;
 };
 
-const parseCSVLine = (line: string): string[] => {
+// Parser CSV mejorado para detectar automáticamente coma o punto y coma
+const parseCSVLine = (line: string, delimiter: string): string[] => {
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
@@ -36,7 +93,7 @@ const parseCSVLine = (line: string): string[] => {
         const char = line[i];
         if (char === '"') {
             inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === delimiter && !inQuotes) {
             result.push(current.trim().replace(/^"|"$/g, ''));
             current = '';
         } else {
@@ -47,9 +104,17 @@ const parseCSVLine = (line: string): string[] => {
     return result;
 };
 
-const parseCSV = (text: string) => {
+const parseCSV = (textInput: string) => {
+  // 1. Limpieza BOM
+  const text = textInput.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-  if (lines.length < 2) throw new Error("El archivo CSV parece estar vacío.");
+  if (lines.length < 2) throw new Error("CSV Vacío");
+
+  // 2. Detección de delimitador (Coma o Punto y Coma)
+  const firstLine = lines[0];
+  const countComma = (firstLine.match(/,/g) || []).length;
+  const countSemi = (firstLine.match(/;/g) || []).length;
+  const delimiter = countSemi > countComma ? ';' : ',';
 
   let headerIndex = -1;
   let headers: string[] = [];
@@ -58,18 +123,15 @@ const parseCSV = (text: string) => {
     const rowRaw = lines[i].toLowerCase();
     if (rowRaw.includes('sku') && (rowRaw.includes('foto') || rowRaw.includes('descripción'))) {
       headerIndex = i;
-      headers = parseCSVLine(lines[i]).map(h => h.toLowerCase());
+      headers = parseCSVLine(lines[i], delimiter).map(h => h.toLowerCase().trim());
       break;
     }
   }
 
-  if (headerIndex === -1) {
-    console.error("CSV Headers no encontrados. Primeras líneas:", lines.slice(0, 3));
-    throw new Error("No se encontraron las columnas 'SKU' y 'Foto'.");
-  }
+  if (headerIndex === -1) throw new Error("Headers CSV no encontrados");
 
   return lines.slice(headerIndex + 1).map(line => {
-    const values = parseCSVLine(line);
+    const values = parseCSVLine(line, delimiter);
     const obj: Record<string, string> = {};
     headers.forEach((h, i) => {
       obj[h] = values[i] || '';
@@ -78,12 +140,15 @@ const parseCSV = (text: string) => {
   });
 };
 
-// Helper para reintentos con timeout
-const fetchWithTimeout = async (url: string, timeout = 5000) => {
+const fetchWithTimeout = async (url: string, timeout = 6000) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+      const response = await fetch(url, { 
+        signal: controller.signal, 
+        cache: 'no-store',
+        headers: { 'Accept': 'text/csv' }
+      });
       clearTimeout(id);
       return response;
     } catch (e) {
@@ -93,120 +158,89 @@ const fetchWithTimeout = async (url: string, timeout = 5000) => {
 };
 
 // =====================================================================
-// FETCH CATALOG (ROBUST MODE)
+// FETCH CATALOG PRINCIPAL
 // =====================================================================
 
 export const fetchCatalog = async (): Promise<Product[]> => {
   try {
     let text = '';
-    let loadedFrom = '';
-
-    // ESTRATEGIA DE CARGA:
-    // 1. Directo Google
-    // 2. Proxy 1 (AllOrigins)
-    // 3. Proxy 2 (CorsProxy)
-    // 4. Caché Local (Fallback)
-
-    try {
-        console.log("Intentando carga directa...");
-        const res = await fetchWithTimeout(PUBLISHED_URL, 4000);
-        if (!res.ok) throw new Error("Direct failed");
-        text = await res.text();
-        loadedFrom = 'Direct';
-    } catch (e) {
-        console.warn("Fallo directo, intentando Proxy 1...", e);
-        try {
-            const proxy1 = `https://api.allorigins.win/get?url=${encodeURIComponent(PUBLISHED_URL)}`;
-            const res = await fetchWithTimeout(proxy1, 6000);
-            const json = await res.json();
-            if (json.contents) text = json.contents;
-            loadedFrom = 'Proxy1';
-        } catch (e2) {
-            console.warn("Fallo Proxy 1, intentando Proxy 2...", e2);
-            try {
-                const proxy2 = `https://corsproxy.io/?${encodeURIComponent(PUBLISHED_URL)}`;
-                const res = await fetchWithTimeout(proxy2, 6000);
-                text = await res.text();
-                loadedFrom = 'Proxy2';
-            } catch (e3) {
-                 console.warn("Fallaron todas las redes. Intentando caché local...", e3);
-            }
-        }
-    }
-
-    // Si falló la red, intentar cargar desde caché
-    if (!text || text.length < 50) {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-            console.log("Cargando desde caché local de emergencia.");
-            text = cached;
-            loadedFrom = 'LocalStorage Cache';
-        } else {
-            throw new Error("No se pudo conectar a la hoja de cálculo y no hay datos en caché.");
-        }
-    } else {
-        // Si descargamos datos frescos válidos, actualizamos el caché
-        if (text.length > 200) {
-            localStorage.setItem(CACHE_KEY, text);
-        }
-    }
-
-    const rows = parseCSV(text);
-    const productMap = new Map<string, Product>();
-
-    rows.forEach(row => {
-      const rawName = row['foto'] || row['descripción foto'] || row['descripcion foto']; 
-      const sku = row['sku'] || row['código (sku)'];
-
-      if (!rawName || !sku) return;
-
-      const productId = slugify(rawName);
-      
-      if (!productMap.has(productId)) {
-        const isFeline = ['leon', 'león', 'leona', 'guepardo', 'leopardo', 'tigre', 'gato', 'felino', 'cheetah'].some(x => rawName.toLowerCase().includes(x));
-        
-        productMap.set(productId, {
-          id: productId,
-          name: rawName,
-          imageUrl: `/photos/${rawName}.jpg`, 
-          isFeline,
-          variants: []
-        });
-      }
-
-      const product = productMap.get(productId)!;
-      
-      const pImp = cleanCurrency(row['pvp imp'] || row['pvp impresion'] || row['precio unitario'] || row['costo imp']); 
-      const pMarco = cleanCurrency(row['pvp marco']);
-      // Ignoramos AR visualmente, pero si viene en el excel lo leemos por si acaso, aunque UI no lo muestra
-      const pAr = cleanCurrency(row['pvp ar'] || row['pvp antireflejo']);
-
-      if (pImp > 0) {
-        product.variants.push({
-          sku: sku,
-          versionName: row['versión'] || row['version'] || 'Estándar',
-          dimensions: row['medidas'] || row['tamaño cm'] || 'N/A',
-          isBig: (row['esgrande'] === '1' || String(row['esgrande']).toLowerCase() === 'true'),
-          prices: {
-            imp: pImp,
-            marco: pMarco > 0 ? pMarco : 0,
-            ar: pAr > 0 ? pAr : 0
-          }
-        });
-      }
-    });
-
-    const result = Array.from(productMap.values());
-    console.log(`Catálogo cargado vía ${loadedFrom}: ${result.length} productos.`);
     
+    // 1. Intentos de red (Cascada)
+    try {
+        console.log("Cargando catálogo...");
+        const res = await fetchWithTimeout(PUBLISHED_URL, 6000); 
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        text = await res.text();
+    } catch (e) {
+        console.warn("Direct fail, trying Proxy 1...", e);
+        try {
+            const proxy1 = `https://corsproxy.io/?${encodeURIComponent(PUBLISHED_URL)}`;
+            const res = await fetchWithTimeout(proxy1, 8000);
+            text = await res.text();
+        } catch (e2) {
+            console.warn("Proxy 1 fail, trying Local Cache...", e2);
+        }
+    }
+
+    // 2. Fallback a LocalStorage si la red falló
+    if (!text) {
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) text = cached;
+        } catch(e) {}
+    }
+
+    // 3. Procesamiento
+    let result: Product[] = [];
+    
+    if (text && text.length > 50) {
+        // Guardar nuevo caché si tuvimos éxito
+        try { localStorage.setItem(CACHE_KEY, text); } catch(e) {}
+
+        const rows = parseCSV(text);
+        const productMap = new Map<string, Product>();
+
+        rows.forEach(row => {
+            const rawName = row['foto'] || row['descripción foto'] || row['descripcion foto']; 
+            const sku = row['sku'] || row['código (sku)'] || row['codigo (sku)'];
+            if (!rawName || !sku) return;
+
+            const productId = slugify(rawName);
+            if (!productMap.has(productId)) {
+                const isFeline = ['leon', 'león', 'leona', 'guepardo', 'leopardo', 'tigre', 'gato', 'felino'].some(x => rawName.toLowerCase().includes(x));
+                productMap.set(productId, {
+                    id: productId, name: rawName, imageUrl: `/photos/${rawName}.jpg`, isFeline, variants: []
+                });
+            }
+            const product = productMap.get(productId)!;
+            const pImp = cleanCurrency(row['pvp imp'] || row['pvp impresion']); 
+            const pMarco = cleanCurrency(row['pvp marco']);
+            const pAr = cleanCurrency(row['pvp ar']);
+
+            if (pImp > 0) {
+                product.variants.push({
+                    sku: sku,
+                    versionName: row['versión'] || row['version'] || 'Estándar',
+                    dimensions: row['medidas'] || row['tamaño cm'] || 'N/A',
+                    isBig: (row['esgrande'] === '1' || String(row['esgrande']).toLowerCase() === 'true'),
+                    prices: { imp: pImp, marco: pMarco, ar: pAr }
+                });
+            }
+        });
+        result = Array.from(productMap.values());
+    }
+
+    // 4. EL PARACAÍDAS (Si todo lo anterior falló y result está vacío)
     if (result.length === 0) {
-      throw new Error("Datos vacíos.");
+        console.warn("⚠️ Error total de conexión. Usando catálogo de respaldo interno (Hardcoded).");
+        return FALLBACK_RAW_DATA as Product[];
     }
 
     return result;
 
   } catch (error) {
-    console.error("Error crítico en fetchCatalog:", error);
-    throw error;
+    console.error("Critical error, using fallback:", error);
+    // En el peor de los casos, devolvemos el hardcoded
+    return FALLBACK_RAW_DATA as Product[];
   }
 };
