@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // Ensures relative paths for drag-and-drop hosting
+  base: '/', // Change from './' to '/' for proper BrowserRouter support
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

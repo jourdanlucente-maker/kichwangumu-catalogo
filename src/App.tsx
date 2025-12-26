@@ -1,14 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import HomePage from './components/HomePage';
 import ProductPage from './components/ProductPage';
 import CartPage from './components/CartPage';
-import { CartItem, MaterialType, Product, ProductVariant } from './types';
-import { fetchCatalog } from './services/mockData';
+import { CartItem, MaterialType, Product, ProductVariant } from './types'; // Esto busca en src/types.ts
+import { fetchCatalog } from './services/mockData'; // Esto busca en src/services/mockData.ts
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 const WHATSAPP_NUMBER = "56982488499";
+
+// Componente para manejar QRs antiguos que usan hash (/#/product/id)
+// Redirige automáticamente a la URL limpia (/product/id)
+const LegacyHashRedirect: React.FC = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (window.location.hash && window.location.hash.startsWith('#/')) {
+      const path = window.location.hash.substring(1);
+      navigate(path, { replace: true });
+    }
+  }, [navigate]);
+  return null;
+};
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -46,9 +59,13 @@ const App: React.FC = () => {
     loadData();
   }, []);
 
-  // 2. Persistir Carrito
+  // 2. Persistir Carrito (Protegido para Safari Private Mode)
   useEffect(() => {
-    localStorage.setItem('kichwangumu_cart', JSON.stringify(cartItems));
+    try {
+      localStorage.setItem('kichwangumu_cart', JSON.stringify(cartItems));
+    } catch (e) {
+      console.warn("No se pudo guardar el carrito en LocalStorage (Safari Private Mode?)", e);
+    }
   }, [cartItems]);
 
   // --- HANDLERS ---
@@ -111,7 +128,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <HashRouter>
+    <BrowserRouter>
+      <LegacyHashRedirect />
       <Layout cartItemCount={cartItems.length}>
         <Routes>
           <Route path="/" element={<HomePage products={products} />} />
@@ -132,7 +150,7 @@ const App: React.FC = () => {
           />
         </Routes>
       </Layout>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 

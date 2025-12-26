@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBagIcon, HomeIcon } from '@heroicons/react/24/outline';
+import { Analytics } from '@vercel/analytics/react'; // Usamos /react, no /next (porque usamos Vite)
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,6 +49,9 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount }) => {
         <p>© 2025 Kichwa Ngumu</p>
         <p className="text-xs mt-1 opacity-50">Photography & Conservation</p>
       </footer>
+      
+      {/* Analytics Component: Rastrea las visitas en cada cambio de página */}
+      <Analytics />
     </div>
   );
 };
