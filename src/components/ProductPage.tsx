@@ -66,18 +66,19 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
       
       {/* 1. Imagen y Título */}
       <div className="space-y-4">
-        <div className="aspect-square w-full bg-surface rounded-lg overflow-hidden border border-border relative flex items-center justify-center">
+        {/* CORRECCIÓN: Quitamos aspect-square y object-cover para respetar el formato original */}
+        <div className="w-full bg-surface rounded-lg overflow-hidden border border-border relative">
           <img 
             src={getSafeSrc(product.imageUrl)} 
             alt={product.name} 
-            className="w-full h-full object-cover"
+            className="w-full h-auto block"
             onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
                 const fallback = (e.target as HTMLImageElement).nextElementSibling;
                 if (fallback) fallback.classList.remove('hidden');
             }}
           />
-           <div className="hidden absolute inset-0 flex flex-col items-center justify-center text-muted p-4 text-center bg-surface z-10">
+           <div className="hidden min-h-[300px] flex flex-col items-center justify-center text-muted p-4 text-center bg-surface">
                  <ExclamationCircleIcon className="w-12 h-12 mb-2 text-red-400 opacity-50" />
                  <span className="text-xs uppercase font-bold text-red-300 mb-1">Sin Imagen</span>
                  <span className="text-[10px] font-mono opacity-60">/photos/{product.name}.jpg</span>

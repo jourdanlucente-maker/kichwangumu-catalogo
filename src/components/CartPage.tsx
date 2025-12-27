@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CartItem, DiscountResult } from '../types';
 import { calculateTotals, formatMoney, getMaterialLabel } from '../services/cartLogic';
-import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon, ExclamationTriangleIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, StarIcon, CreditCardIcon, ChatBubbleLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface CartPageProps {
   items: CartItem[];
@@ -33,9 +33,8 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
         setPaymentStatus('failure');
       } else if (status === 'pending' || status === 'in_process') {
         setPaymentStatus('pending');
-        onClearCart(); // Opcional: limpiar carro si está pendiente, o dejarlo. Generalmente pendiente = compra hecha.
+        onClearCart(); 
       }
-      // Limpiar URL para no reprocesar al refrescar
       navigate('/cart', { replace: true });
     }
   }, [location, onClearCart, navigate]);
@@ -47,7 +46,6 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
     setErrorMessage(null);
 
     try {
-      // Construir descripción corta para el título (Max chars en MP suele ser limitado, pero intentamos meter lo clave)
       const shortDesc = `Pedido Kichwa (${items.length}): ` + items.map(i => 
         `${i.productName.substring(0, 10)}..[${i.dimensions}]`
       ).join(' + ');
@@ -58,7 +56,7 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemoveItem, onClearCart, w
         body: JSON.stringify({ 
           total: calculation.total,
           description: shortDesc,
-          items: items // Enviamos el array completo para procesarlo mejor en el backend
+          items: items 
         }),
       });
 
@@ -113,7 +111,6 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
   };
 
   // --- PANTALLAS DE ESTADO ---
-
   if (paymentStatus === 'success') {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
@@ -123,7 +120,7 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
         <div>
           <h2 className="text-2xl font-bold text-white">¡Pago Exitoso!</h2>
           <p className="text-muted mt-4 max-w-sm mx-auto">
-            Muchas gracias por tu compra. Te contactaremos a la brevedad para coordinar la entrega.
+            Muchas gracias por tu compra. Te contactaremos a la brevedad para coordinar el envío.
           </p>
         </div>
         <button 
@@ -140,17 +137,17 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
         <div className="w-24 h-24 bg-yellow-900/30 rounded-full flex items-center justify-center border border-yellow-500/50 text-yellow-400">
-          <ClockIcon className="w-12 h-12" />
+          <CheckCircleIcon className="w-12 h-12" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-white">Pago Pendiente</h2>
+          <h2 className="text-2xl font-bold text-white">Pago en Proceso</h2>
           <p className="text-muted mt-4 max-w-sm mx-auto">
-            Tu pago se está procesando. Te avisaremos apenas se confirme.
+            Estamos confirmando tu pago. Te contactaremos apenas se valide.
           </p>
         </div>
         <button 
           onClick={() => setPaymentStatus('none')}
-          className="mt-8 px-8 py-3 bg-surface border border-white text-white rounded-full font-bold hover:bg-white/10 transition"
+          className="mt-8 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
         >
           Volver
         </button>
@@ -162,33 +159,24 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6 animate-fade-in px-4">
         <div className="w-24 h-24 bg-red-900/30 rounded-full flex items-center justify-center border border-red-500/50 text-red-400">
-          <XCircleIcon className="w-12 h-12" />
+          <ExclamationTriangleIcon className="w-12 h-12" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-white">Pago Rechazado</h2>
           <p className="text-muted mt-4 max-w-sm mx-auto">
-            Hubo un problema con el pago. Por favor intenta con otro medio o contáctanos.
+            Hubo un problema con el pago. Por favor intenta nuevamente o contáctanos.
           </p>
         </div>
-        <div className="flex flex-col gap-3 mt-8 w-full max-w-xs">
-            <button 
-            onClick={() => setPaymentStatus('none')}
-            className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
-            >
-            Intentar Nuevamente
-            </button>
-            <button 
-            onClick={handleWhatsApp}
-            className="px-8 py-3 bg-surface border border-border text-white rounded-full font-bold hover:bg-surface/80 transition"
-            >
-            Hablar por WhatsApp
-            </button>
-        </div>
+        <button 
+          onClick={() => setPaymentStatus('none')}
+          className="mt-8 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition"
+        >
+          Volver al Carrito
+        </button>
       </div>
     );
   }
 
-  // --- CARRITO VACÍO ---
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
@@ -236,7 +224,9 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
                </div>
                <p className="text-sm text-muted mt-1">{item.dimensions} cm — {getMaterialLabel(item.material)}</p>
                <div className="flex justify-between items-end mt-2">
-                 <span className="font-medium">{formatMoney(item.price)}</span>
+                 <span className="font-medium">
+                    {formatMoney(item.price)}
+                 </span>
                  <button 
                   onClick={() => onRemoveItem(item.cartId)}
                   className="text-xs text-red-400 hover:text-red-300 underline"
@@ -255,24 +245,18 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
           <span>{formatMoney(calculation.subtotal)}</span>
         </div>
 
-        {calculation.discountRate === 0 && (
-           <div className="text-xs text-muted text-center py-2 bg-black/20 rounded">
-             {calculation.count < 3 && `Agrega ${3 - calculation.count} obras más para 15% OFF`}
-             {calculation.count >= 3 && calculation.count < 4 && `Agrega 1 obra más para 20% OFF`}
-             {calculation.grandesCount === 1 && <span className="block mt-1">O agrega 1 formato "Grande" más para 15% OFF</span>}
-           </div>
-        )}
-        
         {calculation.discountRate > 0 && (
           <div className="flex justify-between text-accent animate-pulse">
             <span className="font-bold">{calculation.label}</span>
-            <span>-{formatMoney(calculation.subtotal - calculation.total)}</span>
+            <span>- {formatMoney(calculation.subtotal - calculation.total)}</span>
           </div>
         )}
 
         <div className="border-t border-border pt-4 flex justify-between items-center">
           <span className="text-lg font-light">Total</span>
-          <span className="text-2xl font-bold text-white">{formatMoney(calculation.total)}</span>
+          <span className="text-2xl font-bold text-white">
+             {formatMoney(calculation.total)}
+          </span>
         </div>
       </div>
 
@@ -287,6 +271,7 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
         </div>
       )}
 
+      {/* CHECKOUT SECTION */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4 z-40 shadow-2xl">
         <div className="max-w-3xl mx-auto space-y-3">
           
@@ -299,14 +284,14 @@ Prefiero coordinar transferencia o tengo una duda. Gracias!`;
               ${loadingPay ? 'opacity-70 cursor-wait' : ''}
             `}
           >
-            {loadingPay ? (
-              <span>Procesando...</span>
-            ) : (
-              <>
-                <CreditCardIcon className="w-5 h-5" />
-                Pagar Ahora
-              </>
-            )}
+             {loadingPay ? (
+               <span>Procesando...</span>
+             ) : (
+               <>
+                 <CreditCardIcon className="w-5 h-5" />
+                 Pagar con Mercado Pago
+               </>
+             )}
           </button>
 
           <button

@@ -53,7 +53,7 @@ export const getMaterialLabel = (mat: MaterialType): string => {
   switch (mat) {
     case 'imp': return 'Impresión Fine Art';
     case 'marco': return 'Enmarcado Negro Minimal';
-    case 'ar': return 'Acrílico (AR)'; // Mantenido por compatibilidad histórica
+    case 'ar': return 'Acrílico (AR)';
     default: return mat;
   }
 };
