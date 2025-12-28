@@ -7,6 +7,15 @@ const SHEET_ID_LONG = "2PACX-1vRbwfXLJyJ8VIP8fwqFZzbeV6PGJ8Ygu8IS1yVRiXG5xJq-6W9
 const PUBLISHED_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_LONG}/pub?output=csv`;
 const CACHE_KEY = 'kichwa_catalog_cache_v2'; // Incrementamos versión caché
 
+// Helper para filtrar marcos en tamaños grandes
+const sanitizePricesForSize = (dimensions: string, prices: { imp: number, marco: number, ar: number }) => {
+    // Si el tamaño es 60x90 o 80x120, eliminamos la opción de marco/ar (precio 0 lo oculta en el UI)
+    if (dimensions.includes('60x90') || dimensions.includes('80x120')) {
+        return { ...prices, marco: 0, ar: 0 };
+    }
+    return prices;
+};
+
 // =====================================================================
 // DATOS DE RESPALDO (FALLBACK)
 // Estos se usarán si falla la conexión a Google Sheets.
@@ -29,15 +38,15 @@ const FALLBACK_RAW_DATA = [
   {
     id: "elefante-macho", name: "ELEFANTE MACHO", imageUrl: "/photos/ELEFANTE MACHO.jpg", isFeline: false,
     variants: [
-      { sku: "ELE_MAC_60x90", versionName: "Std 2:3", dimensions: "60x90", isBig: true, prices: { imp: 110400, marco: 243600, ar: 316700 } },
+      { sku: "ELE_MAC_60x90", versionName: "Std 2:3", dimensions: "60x90", isBig: true, prices: sanitizePricesForSize("60x90", { imp: 110400, marco: 243600, ar: 316700 }) },
       { sku: "ELE_MAC_40x60", versionName: "Std 2:3", dimensions: "40x60", isBig: true, prices: { imp: 57200, marco: 143800, ar: 186900 } }
     ]
   },
   {
     id: "grupo-nus", name: "GRUPO DE ÑUS", imageUrl: "/photos/GRUPO DE ÑUS.jpg", isFeline: false,
     variants: [
-      { sku: "GRU_NUS_80x120", versionName: "Gran Formato", dimensions: "80x120", isBig: true, prices: { imp: 196000, marco: 446000, ar: 579800 } },
-      { sku: "GRU_NUS_60x90", versionName: "Std 2:3", dimensions: "60x90", isBig: true, prices: { imp: 110400, marco: 243600, ar: 316700 } }
+      { sku: "GRU_NUS_80x120", versionName: "Gran Formato", dimensions: "80x120", isBig: true, prices: sanitizePricesForSize("80x120", { imp: 196000, marco: 446000, ar: 579800 }) },
+      { sku: "GRU_NUS_60x90", versionName: "Std 2:3", dimensions: "60x90", isBig: true, prices: sanitizePricesForSize("60x90", { imp: 110400, marco: 243600, ar: 316700 }) }
     ]
   },
   {
@@ -213,15 +222,24 @@ export const fetchCatalog = async (): Promise<Product[]> => {
                 });
             }
             const product = productMap.get(productId)!;
+            
+            // Precios RAW
             const pImp = cleanCurrency(row['pvp imp'] || row['pvp impresion']); 
-            const pMarco = cleanCurrency(row['pvp marco']);
-            const pAr = cleanCurrency(row['pvp ar']);
+            let pMarco = cleanCurrency(row['pvp marco']);
+            let pAr = cleanCurrency(row['pvp ar']);
+            const dimensions = row['medidas'] || row['tamaño cm'] || 'N/A';
+
+            // Lógica de sanitización: Eliminar marcos para formatos grandes
+            if (dimensions.includes('60x90') || dimensions.includes('80x120')) {
+                pMarco = 0;
+                pAr = 0;
+            }
 
             if (pImp > 0) {
                 product.variants.push({
                     sku: sku,
                     versionName: row['versión'] || row['version'] || 'Estándar',
-                    dimensions: row['medidas'] || row['tamaño cm'] || 'N/A',
+                    dimensions: dimensions,
                     isBig: (row['esgrande'] === '1' || String(row['esgrande']).toLowerCase() === 'true'),
                     prices: { imp: pImp, marco: pMarco, ar: pAr }
                 });

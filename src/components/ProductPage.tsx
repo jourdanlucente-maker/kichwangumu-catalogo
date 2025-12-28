@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { formatMoney } from '../services/cartLogic';
 import { MaterialType, ProductVariant, Product } from '../types';
-import { CheckIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
+import { CheckIcon, ExclamationCircleIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
 
 interface ProductPageProps {
   products: Product[];
   onAddToCart: (product: Product, variant: ProductVariant, material: MaterialType) => void;
+  whatsappNumber: string;
 }
 
-const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
+const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsappNumber }) => {
   const { id } = useParams<{ id: string }>();
   
   // BUSCAR EL PRODUCTO EN LA LISTA DESCARGADA
@@ -54,6 +55,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
     }
   };
 
+  const handleQuote = () => {
+    const sizeText = selectedVariant ? ` en tamaño ${selectedVariant.dimensions}cm` : '';
+    const message = `Hola, me gustaría cotizar la foto "${product.name}"${sizeText} en otro formato o tela canvas.`;
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    window.location.href = url;
+  };
+
   const getSafeSrc = (url: string) => {
     const lastSlash = url.lastIndexOf('/');
     const path = url.substring(0, lastSlash + 1);
@@ -78,6 +86,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
                 if (fallback) fallback.classList.remove('hidden');
             }}
           />
+           {/* Fallback visual si la imagen falla */}
            <div className="hidden min-h-[300px] flex flex-col items-center justify-center text-muted p-4 text-center bg-surface">
                  <ExclamationCircleIcon className="w-12 h-12 mb-2 text-red-400 opacity-50" />
                  <span className="text-xs uppercase font-bold text-red-300 mb-1">Sin Imagen</span>
@@ -164,6 +173,15 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart }) => {
                 </div>
               </button>
             )})}
+            
+            {/* BOTÓN DE COTIZACIÓN */}
+            <button
+              onClick={handleQuote}
+              className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border border-border border-dashed text-muted hover:text-white hover:border-white hover:bg-surface/50 transition-all duration-200 mt-2"
+            >
+               <ChatBubbleLeftRightIcon className="w-5 h-5" />
+               <span className="font-medium text-sm">Cotizar otro tamaño o impresión en tela</span>
+            </button>
           </div>
         </div>
       )}
