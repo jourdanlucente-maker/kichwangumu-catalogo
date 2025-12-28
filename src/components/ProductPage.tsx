@@ -180,7 +180,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsa
               className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border border-border border-dashed text-muted hover:text-white hover:border-white hover:bg-surface/50 transition-all duration-200 mt-2"
             >
                <ChatBubbleLeftRightIcon className="w-5 h-5" />
-               <span className="font-medium text-sm">Cotizar otro tamaño o impresión en tela</span>
+               <span className="font-medium text-sm">¿Necesitas otro marco, tamaño o impresión en tela? Escríbenos!</span>
             </button>
           </div>
         </div>
