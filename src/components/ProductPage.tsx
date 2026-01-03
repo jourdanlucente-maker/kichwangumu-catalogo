@@ -79,6 +79,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsa
           <img 
             src={getSafeSrc(product.imageUrl)} 
             alt={product.name} 
+            loading="lazy"
+            decoding="async"
             className="w-full h-auto block"
             onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';

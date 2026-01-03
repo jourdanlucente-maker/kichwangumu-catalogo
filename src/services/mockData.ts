@@ -8,9 +8,15 @@ const PUBLISHED_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_LONG}
 const CACHE_KEY = 'kichwa_catalog_cache_v2'; // Incrementamos versión caché
 
 // Helper para filtrar marcos en tamaños grandes
+// Lógica: Si es 60x90 o 80x120 (o invertido), precio marco/ar = 0 para ocultarlo.
+const isLargeFormat = (dim: string) => {
+  if (!dim) return false;
+  const d = dim.replace(/\s/g, ''); // Quitar espacios para comparar seguro
+  return d.includes('60x90') || d.includes('90x60') || d.includes('80x120') || d.includes('120x80');
+};
+
 const sanitizePricesForSize = (dimensions: string, prices: { imp: number, marco: number, ar: number }) => {
-    // Si el tamaño es 60x90 o 80x120, eliminamos la opción de marco/ar (precio 0 lo oculta en el UI)
-    if (dimensions.includes('60x90') || dimensions.includes('80x120')) {
+    if (isLargeFormat(dimensions)) {
         return { ...prices, marco: 0, ar: 0 };
     }
     return prices;
@@ -230,7 +236,8 @@ export const fetchCatalog = async (): Promise<Product[]> => {
             const dimensions = row['medidas'] || row['tamaño cm'] || 'N/A';
 
             // Lógica de sanitización: Eliminar marcos para formatos grandes
-            if (dimensions.includes('60x90') || dimensions.includes('80x120')) {
+            // Usamos la función auxiliar que revisa rotaciones (120x80 o 80x120)
+            if (isLargeFormat(dimensions)) {
                 pMarco = 0;
                 pAr = 0;
             }

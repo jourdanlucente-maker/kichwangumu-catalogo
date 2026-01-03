@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/', // Change from './' to '/' for proper BrowserRouter support
   build: {
+    target: 'es2015', // Aumenta compatibilidad con Safari iOS
     outDir: 'dist',
     assetsDir: 'assets',
   }
