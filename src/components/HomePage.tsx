@@ -20,7 +20,7 @@ const HomePage: React.FC<HomePageProps> = ({ products }) => {
       <div className="text-center space-y-2 py-8">
         <h1 className="text-3xl font-light uppercase tracking-[0.2em]">Kichwa<span className="font-bold">Ngumu</span></h1>
         <p className="text-muted text-sm max-w-xs mx-auto">
-          Catálogo y venta de fotografía fine art.
+          Catálogo digital. Selecciona una obra para consultar detalles.
         </p>
       </div>
       
@@ -41,7 +41,8 @@ const HomePage: React.FC<HomePageProps> = ({ products }) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                   (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                 }}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                /* OPTIMIZACIÓN IOS: Eliminado 'group-hover:scale-110' para reducir uso de GPU */
+                className="w-full h-full object-cover transition-opacity duration-300 hover:opacity-90"
               />
               {/* Fallback if image not found in 'photos' folder */}
               <div className="hidden absolute inset-0 flex flex-col items-center justify-center text-muted p-2 text-center">
@@ -49,10 +50,10 @@ const HomePage: React.FC<HomePageProps> = ({ products }) => {
                  <span className="text-[10px] leading-tight break-all">Sin imagen</span>
               </div>
               
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
             </div>
             <h3 className="text-sm font-bold uppercase tracking-wide truncate">{product.name}</h3>
-            <p className="text-xs text-muted">Ver Opciones</p>
+            <p className="text-xs text-muted">Consultar</p>
           </Link>
         )})}
       </div>

@@ -1,18 +1,16 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBagIcon, HomeIcon } from '@heroicons/react/24/outline';
-import { Analytics } from '@vercel/analytics/react'; // Usamos /react, no /next (porque usamos Vite)
+import { HomeIcon } from '@heroicons/react/24/outline';
+import { Analytics } from '@vercel/analytics/react';
 
 interface LayoutProps {
   children: React.ReactNode;
-  cartItemCount: number;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, cartItemCount }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   
   return (
-    // CAMBIO CLAVE: min-h-[100dvh] en lugar de min-h-screen para corregir barra navegación Safari Mobile
     <div className="min-h-[100dvh] flex flex-col font-sans bg-background text-text">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
@@ -27,14 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount }) => {
                   <HomeIcon className="w-6 h-6" />
                </Link>
             )}
-            <Link to="/cart" className="relative p-2 text-white hover:text-accent transition-colors">
-              <ShoppingBagIcon className="w-6 h-6" />
-              {cartItemCount > 0 && (
-                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-black transform translate-x-1/4 -translate-y-1/4 bg-white rounded-full">
-                  {cartItemCount}
-                </span>
-              )}
-            </Link>
+            {/* Carrito eliminado en esta versión */}
           </div>
         </div>
       </header>
@@ -50,7 +41,6 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount }) => {
         <p className="text-xs mt-1 opacity-50">Photography & Conservation</p>
       </footer>
       
-      {/* Analytics Component: Rastrea las visitas en cada cambio de página */}
       <Analytics />
     </div>
   );

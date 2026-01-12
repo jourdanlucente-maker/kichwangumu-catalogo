@@ -1,29 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { formatMoney } from '../services/cartLogic';
-import { MaterialType, ProductVariant, Product } from '../types';
-import { CheckIcon, ExclamationCircleIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
+import { Product } from '../types';
+import { ExclamationCircleIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
 
 interface ProductPageProps {
   products: Product[];
-  onAddToCart: (product: Product, variant: ProductVariant, material: MaterialType) => void;
   whatsappNumber: string;
 }
 
-const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsappNumber }) => {
+const ProductPage: React.FC<ProductPageProps> = ({ products, whatsappNumber }) => {
   const { id } = useParams<{ id: string }>();
   
   // BUSCAR EL PRODUCTO EN LA LISTA DESCARGADA
   const product = products.find(p => p.id === id);
 
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
-  const [selectedMaterial, setSelectedMaterial] = useState<MaterialType | null>(null);
-  const [showNotification, setShowNotification] = useState(false);
-
   useEffect(() => {
     window.scrollTo(0, 0);
-    setSelectedVariant(null);
-    setSelectedMaterial(null);
   }, [id]);
 
   if (!product) {
@@ -38,26 +30,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsa
     );
   }
 
-  const handleVariantSelect = (v: ProductVariant) => {
-    setSelectedVariant(v);
-    setSelectedMaterial(null);
-  };
-
-  const currentPrice = selectedVariant && selectedMaterial 
-    ? selectedVariant.prices[selectedMaterial] 
-    : 0;
-
-  const handleAdd = () => {
-    if (selectedVariant && selectedMaterial) {
-      onAddToCart(product, selectedVariant, selectedMaterial);
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    }
-  };
-
-  const handleQuote = () => {
-    const sizeText = selectedVariant ? ` en tamaño ${selectedVariant.dimensions}cm` : '';
-    const message = `Hola, me gustaría cotizar la foto "${product.name}"${sizeText} en otro formato o tela canvas.`;
+  const handleInterest = () => {
+    const message = `Hola! Estuve viendo el catálogo web y me interesa la fotografía "${product.name}". Me gustaría saber qué tamaños y formatos tienen disponibles.`;
     const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     window.location.href = url;
   };
@@ -74,7 +48,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsa
       
       {/* 1. Imagen y Título */}
       <div className="space-y-4">
-        {/* CORRECCIÓN: Quitamos aspect-square y object-cover para respetar el formato original */}
         <div className="w-full bg-surface rounded-lg overflow-hidden border border-border relative">
           <img 
             src={getSafeSrc(product.imageUrl)} 
@@ -104,122 +77,30 @@ const ProductPage: React.FC<ProductPageProps> = ({ products, onAddToCart, whatsa
         </div>
       </div>
 
-      {/* 2. Seleccionar Formato */}
-      <div className="space-y-3 animate-slide-up">
-        <h3 className="text-sm font-bold uppercase text-muted tracking-wider">1. Seleccionar Formato</h3>
-        
-        {product.variants.length === 0 ? (
-           <p className="text-red-400 text-sm">No hay variantes disponibles para esta obra.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {product.variants.map((v) => (
-              <button
-                key={v.sku}
-                onClick={() => handleVariantSelect(v)}
-                className={`
-                  relative p-4 rounded-lg border text-left transition-all duration-200 group
-                  ${selectedVariant?.sku === v.sku 
-                    ? 'bg-white text-black border-white' 
-                    : 'bg-surface text-muted border-border hover:border-muted'
-                  }
-                `}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="block font-medium text-lg">{v.dimensions} cm</span>
-                    <span className="text-xs opacity-70 uppercase">{v.versionName}</span>
-                  </div>
-                  {selectedVariant?.sku === v.sku && <CheckIcon className="w-5 h-5 text-black" />}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+      {/* 2. Información y Botón */}
+      <div className="space-y-6 animate-slide-up">
+        <div className="bg-surface p-6 rounded-lg border border-border text-center space-y-4">
+            <p className="text-muted text-sm leading-relaxed">
+                Esta obra está disponible en impresiones Fine Art de calidad museo, con opciones de enmarcado en madera nativa o montaje en acrílico.
+            </p>
+            <p className="text-white font-medium">
+                Contáctanos para ver disponibilidad de tamaños y ediciones limitadas.
+            </p>
+        </div>
       </div>
 
-      {/* 3. Seleccionar Material */}
-      {selectedVariant && (
-        <div className="space-y-3 animate-fade-in">
-          <h3 className="text-sm font-bold uppercase text-muted tracking-wider">2. Material de Impresión</h3>
-          <div className="space-y-2">
-            {[
-              { id: 'imp', label: 'Impresión Fine Art', desc: 'Papel algodón calidad museo' },
-              { id: 'marco', label: 'Enmarcado', desc: 'Negro Minimal + Vidrio' }
-            ].map((mat) => {
-              const price = selectedVariant.prices[mat.id as MaterialType];
-              // Solo mostrar si el precio existe y es mayor a 0
-              if (!price || price <= 0) return null;
-
-              return (
-              <button
-                key={mat.id}
-                onClick={() => setSelectedMaterial(mat.id as MaterialType)}
-                className={`
-                  w-full flex items-center justify-between p-4 rounded-lg border transition-all duration-200
-                  ${selectedMaterial === mat.id 
-                    ? 'bg-surface border-accent text-white shadow-[0_0_15px_rgba(102,252,241,0.1)]' 
-                    : 'bg-surface border-border text-muted hover:bg-surface/80'
-                  }
-                `}
-              >
-                <div className="text-left">
-                  <span className={`block font-medium ${selectedMaterial === mat.id ? 'text-accent' : 'text-white'}`}>
-                    {mat.label}
-                  </span>
-                  <span className="text-xs opacity-60">{mat.desc}</span>
-                </div>
-                <div className="text-right">
-                   <span className="block font-bold text-white">
-                      {formatMoney(price)}
-                   </span>
-                </div>
-              </button>
-            )})}
-            
-            {/* BOTÓN DE COTIZACIÓN */}
-            <button
-              onClick={handleQuote}
-              className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border border-border border-dashed text-muted hover:text-white hover:border-white hover:bg-surface/50 transition-all duration-200 mt-2"
-            >
-               <ChatBubbleLeftRightIcon className="w-5 h-5" />
-               <span className="font-medium text-sm">¿Necesitas otro marco, tamaño o impresión en tela? Escríbenos!</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Barra Flotante de Precio */}
-      <div className="fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-xl border-t border-border p-4 z-40 pb-safe">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex flex-col">
-            <span className="text-xs text-muted uppercase">Precio Total</span>
-            <span className="text-xl font-bold text-white">
-              {currentPrice > 0 ? formatMoney(currentPrice) : '---'}
-            </span>
-          </div>
-          
+      {/* Barra Flotante de Acción */}
+      <div className="fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-xl border-t border-border p-4 z-40 pb-safe shadow-2xl">
+        <div className="max-w-3xl mx-auto">
           <button
-            disabled={!selectedVariant || !selectedMaterial}
-            onClick={handleAdd}
-            className={`
-              flex-1 py-3 px-6 rounded-full font-bold uppercase tracking-wider transition-all
-              ${selectedVariant && selectedMaterial 
-                ? 'bg-white text-black hover:bg-gray-200 active:scale-95' 
-                : 'bg-border text-muted cursor-not-allowed'
-              }
-            `}
+            onClick={handleInterest}
+            className="w-full py-4 bg-white text-black rounded-full font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-200 active:scale-95 transition-all shadow-lg"
           >
-            Agregar
+            <ChatBubbleLeftRightIcon className="w-6 h-6" />
+            Me Interesa
           </button>
         </div>
       </div>
-
-      {showNotification && (
-        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-accent text-black px-6 py-3 rounded-full shadow-xl z-50 animate-bounce-in flex items-center gap-2 w-max">
-          <CheckIcon className="w-5 h-5" />
-          <span className="font-bold text-sm">Agregado al carro</span>
-        </div>
-      )}
 
     </div>
   );
